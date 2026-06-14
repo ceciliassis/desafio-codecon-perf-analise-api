@@ -2,15 +2,14 @@ import orjson
 
 from collections import Counter
 from datetime import datetime
-from itertools import chain
 
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
 
 class Database:
-    def __init__(self, users=[]):
-        self.users = users
+    def __init__(self, users=None):
+        self.users = users or []
 
 
 app = FastAPI()
@@ -106,8 +105,13 @@ def get_team_insights():
 @app.get("/active-users-per-day")
 @timestamp
 def get_active_users_per_day(min=0):
-    logins = chain.from_iterable(map(lambda user: user["logs"], db.users))
-    logins = [login["date"] for login in logins if login["action"] == "login"]
+
+    logins = [
+        log["date"]
+        for user in db.users
+        for log in user["logs"]
+        if log["action"] == "login"
+    ]
     logins = Counter(logins)
     logins = [
         {"date": date, "total": total} for date, total in logins.items() if total >= min
