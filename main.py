@@ -44,12 +44,12 @@ async def load_users(request: Request):
 
 @app.get("/superusers")
 @timestamp
-def get_superusers(len=10):
+def get_superusers():
     superusers = [
         user for user in service.users if user["score"] >= 900 and user["active"]
     ]
 
-    return {"data": superusers[:len]}
+    return {"data": superusers}
 
 
 @app.get("/top-countries")
@@ -57,7 +57,7 @@ def get_superusers(len=10):
 def get_top_countries():
     superusers = get_superusers()["data"]
 
-    top_countries = Counter([user.country for user in superusers])
+    top_countries = Counter([user["country"] for user in superusers])
     top_countries = [
         {"country": country, "total": total}
         for country, total in top_countries.most_common()
@@ -69,17 +69,21 @@ def get_top_countries():
 @app.get("/team-insights")
 @timestamp
 def get_team_insights():
-    active_members = [user.team.name for user in service.users if user.active]
+    active_members = [user["team"]["name"] for user in service.users if user["active"]]
     active_members = Counter(active_members)
 
-    team_members = [user.team.name for user in service.users]
+    team_members = [user["team"]["name"] for user in service.users]
     team_members = Counter(team_members)
 
-    team_leaders = [user.team.name for user in service.users if user.team.leader]
+    team_leaders = [
+        user["team"]["name"] for user in service.users if user["team"]["leader"]
+    ]
     team_leaders = Counter(team_leaders)
 
     completed_projects = [
-        user.team.name for user in service.users for project in user.team.projects
+        user["team"]["name"]
+        for user in service.users
+        for project in user["team"]["projects"]
     ]
     completed_projects = Counter(completed_projects)
 
@@ -100,8 +104,8 @@ def get_team_insights():
 @app.get("/active-users-per-day")
 @timestamp
 def get_active_users_per_day(min=0):
-    logins = chain.from_iterable(map(lambda user: user.logs, service.users))
-    logins = [login.date for login in logins if login.action == "login"]
+    logins = chain.from_iterable(map(lambda user: user["logs"], service.users))
+    logins = [login["date"] for login in logins if login["action"] == "login"]
     logins = Counter(logins)
     logins = [
         {"date": date, "total": total} for date, total in logins.items() if total >= min
