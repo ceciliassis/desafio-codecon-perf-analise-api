@@ -21,3 +21,7 @@ content-type: application/json
 ### GET team-insights
 GET http://127.0.0.1:8000/team-insights
 content-type: application/json
+
+### GET evaluation
+GET http://127.0.0.1:8000/evaluation
+content-type: application/json

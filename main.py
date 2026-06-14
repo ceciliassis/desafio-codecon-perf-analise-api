@@ -4,7 +4,7 @@ from collections import Counter
 from datetime import datetime
 from itertools import chain
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 
 
 class Service:
@@ -23,7 +23,9 @@ def timestamp(func):
         end = datetime.now() - start
 
         result["timestamp"] = start
-        result["execution_time_ms"] = end * 1e3  # milisseconds = 1e3 == 1000
+        result["execution_time_ms"] = round(
+            float(str(end * 1e3).split(":")[-1])
+        )  # milisseconds = 1e3 == 1000
 
         return result
 
@@ -36,7 +38,6 @@ async def load_users(request: Request):
     service.users = orjson.loads(users)
 
     return {
-        "status_code": 200,
         "message": "Arquivo recebido com sucesso",
         "user_count": len(service.users),
     }
@@ -49,7 +50,9 @@ def get_superusers():
         user for user in service.users if user["score"] >= 900 and user["active"]
     ]
 
-    return {"data": superusers}
+    return {
+        "data": superusers,
+    }
 
 
 @app.get("/top-countries")
@@ -116,4 +119,24 @@ def get_active_users_per_day(min=0):
 
 @app.get("/evaluation")
 def get_evaluation():
-    pass
+    tested_endpoints = {}
+
+    for route in app.routes:
+        if route.name == "wrapper":
+            path = route.path
+            func = "get" + path.replace("/", "_").replace("-", "_")
+
+            tested_endpoints[path] = {
+                "status": status.HTTP_200_OK,
+                "time_ms": 0,
+                "valid_response": True,
+            }
+
+            try:
+                result = eval(func)()
+                tested_endpoints[path]["time_ms"] = result["execution_time_ms"]
+            except:
+                tested_endpoints[path]["status"] = status.HTTP_500_INTERNAL_SERVER_ERROR
+                tested_endpoints[path]["valid_response"] = False
+
+    return {"tested_endpoints": tested_endpoints}
