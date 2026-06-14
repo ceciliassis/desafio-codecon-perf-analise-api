@@ -4,7 +4,8 @@ from collections import Counter
 from datetime import datetime
 from itertools import chain
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request
+from fastapi.testclient import TestClient
 
 
 class Database:
@@ -14,6 +15,7 @@ class Database:
 
 app = FastAPI()
 db = Database()
+client = TestClient(app)
 
 
 def timestamp(func):
@@ -61,7 +63,7 @@ def get_top_countries():
     top_countries = Counter([user["country"] for user in superusers])
     top_countries = [
         {"country": country, "total": total}
-        for country, total in top_countries.most_common()
+        for country, total in top_countries.most_common(5)
     ]
 
     return {"countries": top_countries}
@@ -83,6 +85,7 @@ def get_team_insights():
         user["team"]["name"]
         for user in db.users
         for project in user["team"]["projects"]
+        if project["completed"]
     ]
     completed_projects = Counter(completed_projects)
 
@@ -120,19 +123,14 @@ def get_evaluation():
     for route in app.routes:
         if route.name == "wrapper":
             path = route.path
-            func = "get" + path.replace("/", "_").replace("-", "_")
+
+            response = client.get(path)
 
             tested_endpoints[path] = {
-                "status": status.HTTP_200_OK,
-                "time_ms": 0,
-                "valid_response": True,
+                "time_ms": response.json()["execution_time_ms"],
+                "status": response.status_code,
+                "valid_response": response.headers["content-type"]
+                == "application/json",
             }
-
-            try:
-                result = eval(func)()
-                tested_endpoints[path]["time_ms"] = result["execution_time_ms"]
-            except:
-                tested_endpoints[path]["status"] = status.HTTP_500_INTERNAL_SERVER_ERROR
-                tested_endpoints[path]["valid_response"] = False
 
     return {"tested_endpoints": tested_endpoints}
