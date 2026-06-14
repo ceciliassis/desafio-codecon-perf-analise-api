@@ -6,11 +6,9 @@ from itertools import chain
 
 from fastapi import FastAPI, Request
 
-from models import User, Team, Project, Log
-
 
 class Service:
-    def __init__(self, users: list[User] = []):
+    def __init__(self, users=[]):
         self.users = users
 
 
@@ -35,24 +33,7 @@ def timestamp(func):
 @app.post("/users")
 async def load_users(request: Request):
     users = await request.body()
-    users = orjson.loads(users)
-    service.users = [
-        User(
-            id=user["id"],
-            name=user["name"],
-            age=user["age"],
-            score=user["score"],
-            active=user["active"],
-            country=user["country"],
-            team=Team(
-                name=user["team"]["name"],
-                leader=user["team"]["leader"],
-                projects=[Project(**project) for project in user["team"]["projects"]],
-            ),
-            logs=[Log(**log) for log in user["logs"]],
-        )
-        for user in users
-    ]
+    service.users = orjson.loads(users)
 
     return {
         "status_code": 200,
@@ -63,10 +44,12 @@ async def load_users(request: Request):
 
 @app.get("/superusers")
 @timestamp
-def get_superusers():
-    superusers = [user for user in service.users if user.score >= 900 and user.active]
+def get_superusers(len=10):
+    superusers = [
+        user for user in service.users if user["score"] >= 900 and user["active"]
+    ]
 
-    return {"data": superusers}
+    return {"data": superusers[:len]}
 
 
 @app.get("/top-countries")
