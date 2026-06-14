@@ -1,4 +1,5 @@
 import orjson
+import time
 
 from collections import Counter
 from datetime import datetime
@@ -19,15 +20,12 @@ client = TestClient(app)
 
 def timestamp(func):
     def wrapper():
-        start = datetime.now()
+        start = time.perf_counter()
         result = func()
-        end = datetime.now() - start
+        end = time.perf_counter() - start
 
-        result["timestamp"] = start
-        result["execution_time_ms"] = round(
-            float(str(end * 1e3).split(":")[-1])
-        )  # milisseconds = 1e3 == 1000
-
+        result["timestamp"] = datetime.now()
+        result["execution_time_ms"] = round(end * 1e3)
         return result
 
     return wrapper
@@ -104,7 +102,7 @@ def get_team_insights():
 
 @app.get("/active-users-per-day")
 @timestamp
-def get_active_users_per_day(min=0):
+def get_active_users_per_day(min=3000):
 
     logins = [
         log["date"]
