@@ -1,0 +1,23 @@
+### POST user
+POST http://127.0.0.1:8000/users
+content-type: application/json
+
+# < ./usuarios_1000.json
+< ./usuarios.json
+
+
+### GET superusers
+GET http://127.0.0.1:8000/superusers
+content-type: application/json
+
+### GET top-countries
+GET http://127.0.0.1:8000/top-countries
+content-type: application/json
+
+### GET active-users-per-day
+GET http://127.0.0.1:8000/active-users-per-day
+content-type: application/json
+
+### GET team-insights
+GET http://127.0.0.1:8000/team-insights
+content-type: application/json
