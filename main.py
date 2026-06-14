@@ -7,13 +7,13 @@ from itertools import chain
 from fastapi import FastAPI, Request, status
 
 
-class Service:
+class Database:
     def __init__(self, users=[]):
         self.users = users
 
 
 app = FastAPI()
-service = Service()
+db = Database()
 
 
 def timestamp(func):
@@ -35,20 +35,18 @@ def timestamp(func):
 @app.post("/users")
 async def load_users(request: Request):
     users = await request.body()
-    service.users = orjson.loads(users)
+    db.users = orjson.loads(users)
 
     return {
         "message": "Arquivo recebido com sucesso",
-        "user_count": len(service.users),
+        "user_count": len(db.users),
     }
 
 
 @app.get("/superusers")
 @timestamp
 def get_superusers():
-    superusers = [
-        user for user in service.users if user["score"] >= 900 and user["active"]
-    ]
+    superusers = [user for user in db.users if user["score"] >= 900 and user["active"]]
 
     return {
         "data": superusers,
@@ -72,20 +70,18 @@ def get_top_countries():
 @app.get("/team-insights")
 @timestamp
 def get_team_insights():
-    active_members = [user["team"]["name"] for user in service.users if user["active"]]
+    active_members = [user["team"]["name"] for user in db.users if user["active"]]
     active_members = Counter(active_members)
 
-    team_members = [user["team"]["name"] for user in service.users]
+    team_members = [user["team"]["name"] for user in db.users]
     team_members = Counter(team_members)
 
-    team_leaders = [
-        user["team"]["name"] for user in service.users if user["team"]["leader"]
-    ]
+    team_leaders = [user["team"]["name"] for user in db.users if user["team"]["leader"]]
     team_leaders = Counter(team_leaders)
 
     completed_projects = [
         user["team"]["name"]
-        for user in service.users
+        for user in db.users
         for project in user["team"]["projects"]
     ]
     completed_projects = Counter(completed_projects)
@@ -107,7 +103,7 @@ def get_team_insights():
 @app.get("/active-users-per-day")
 @timestamp
 def get_active_users_per_day(min=0):
-    logins = chain.from_iterable(map(lambda user: user["logs"], service.users))
+    logins = chain.from_iterable(map(lambda user: user["logs"], db.users))
     logins = [login["date"] for login in logins if login["action"] == "login"]
     logins = Counter(logins)
     logins = [
