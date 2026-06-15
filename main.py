@@ -1,6 +1,7 @@
 import orjson
 import time
 
+from functools import wraps
 from collections import Counter
 from datetime import datetime
 
@@ -19,13 +20,15 @@ client = TestClient(app)
 
 
 def timestamp(func):
-    def wrapper():
+    @wraps(func)
+    def wrapper(*args, **kwargs):
         start = time.perf_counter()
-        result = func()
+        result = func(*args, **kwargs)
         end = time.perf_counter() - start
 
         result["timestamp"] = datetime.now()
         result["execution_time_ms"] = round(end * 1e3)
+
         return result
 
     return wrapper
@@ -103,7 +106,6 @@ def get_team_insights():
 @app.get("/active-users-per-day")
 @timestamp
 def get_active_users_per_day(min=3000):
-
     logins = [
         log["date"]
         for user in db.users
@@ -120,19 +122,22 @@ def get_active_users_per_day(min=3000):
 
 @app.get("/evaluation")
 def get_evaluation():
+    endpoints = [
+        "get_superusers",
+        "get_top_countries",
+        "get_team_insights",
+        "get_active_users_per_day",
+    ]
+
     tested_endpoints = {}
 
-    for route in app.routes:
-        if route.name == "wrapper":
-            path = route.path
+    for endpoint in endpoints:
+        response = client.get(app.url_path_for(endpoint))
 
-            response = client.get(path)
-
-            tested_endpoints[path] = {
-                "time_ms": response.json()["execution_time_ms"],
-                "status": response.status_code,
-                "valid_response": response.headers["content-type"]
-                == "application/json",
-            }
+        tested_endpoints[endpoint] = {
+            "time_ms": response.json()["execution_time_ms"],
+            "status": response.status_code,
+            "valid_response": response.headers["content-type"] == "application/json",
+        }
 
     return {"tested_endpoints": tested_endpoints}
